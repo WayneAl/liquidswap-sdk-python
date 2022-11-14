@@ -11,7 +11,7 @@ from aptos_sdk.transactions import (
 )
 from aptos_sdk.type_tag import StructTag, TypeTag
 
-import constants
+from src import constants
 import config
 from utils import convert_to_decimals, pretty_amount
 
@@ -50,9 +50,7 @@ class LiquidSwapClient(RestClient):
 
     def get_apt_balance(self) -> Optional[int]:
         """get APT balance"""
-        return pretty_amount(
-            int(rest_client.account_balance(self.my_account.address())), "APTOS"
-        )
+        return pretty_amount(int(rest_client.account_balance(self.my_account.address())), "APTOS")
 
     def get_usdt_balance(self) -> Optional[int]:
         """get USDT balance"""
@@ -107,9 +105,7 @@ if __name__ == "__main__":
     # )
 
     print(f"public key: {rest_client.my_account.public_key()}")
-    print(
-        f"balance: APT {rest_client.get_apt_balance()}, USDT {rest_client.get_usdt_balance()}"
-    )
+    print(f"balance: APT {rest_client.get_apt_balance()}, USDT {rest_client.get_usdt_balance()}")
 
     apt_in = 0.0001
 

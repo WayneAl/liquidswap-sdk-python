@@ -1,11 +1,11 @@
 # liquidswap-sdk-python
 
 WIP:
+
 - [x] convertToDecimals
 - [ ] calculateRates
 - [ ] createSwapTransactionPayload
 - [ ] create pypl package
-
 
 <!-- Deprecated
 

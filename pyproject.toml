@@ -1,0 +1,27 @@
+[tool.poetry]
+name = "liquidswap_sdk"
+version = "0.0.1"
+description = "Liquidswap Python SDK"
+authors = ["Wayne Kuo <wayne01213@gmail.com>"]
+license = "GPLv3"
+readme = "README.md"
+repository = "https://github.com/WayneAl/liquidswap-sdk-python"
+
+classifiers= [
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.7",
+]
+
+packages = [
+    { include = "src" }
+]
+
+[tool.poetry.dependencies]
+python = "^3.7"
+aptos-sdk = ">=0.4.1"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
