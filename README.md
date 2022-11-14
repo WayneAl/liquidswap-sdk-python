@@ -1,5 +1,14 @@
 # liquidswap-sdk-python
 
+WIP:
+- [x] convertToDecimals
+- [ ] calculateRates
+- [ ] createSwapTransactionPayload
+- [ ] create pypl package
+
+
+<!-- Deprecated
+
 # Python SDK Example
 
 This is a simple example for the Python SDK.
@@ -29,3 +38,4 @@ apt_in: 0.0001, usdt_out: 0.000748
 swap 0.0001 APT to 0.000748 USDT...
 txn_hash: 0x493b702a7358dee53ff4f09ce32d126dc62c48c2cc666b2eb658dc94ba9a73b2
 ```
+-->
