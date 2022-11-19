@@ -11,15 +11,8 @@ from aptos_sdk.transactions import (
 )
 from aptos_sdk.type_tag import StructTag, TypeTag
 
-from . import constants
-import examples.config as config
-from examples.utils import convert_to_decimals, pretty_amount
-
-# Your wallet path
-wallet_path = "/Users/waynekuo/aptos/brave.json"
-slippage = 0.05
-
-CURVES = f"{constants.MODULES_ACCOUNT}::curves::Uncorrelated"
+import constants
+import config
 
 
 class LiquidSwapClient(RestClient):
@@ -31,39 +24,71 @@ class LiquidSwapClient(RestClient):
         else:
             self.my_account = Account.generate()
 
-    def get_amount_out(self, amount_in: float) -> Optional[float]:
-        """get USDT amount_out with APT `amount_in`"""
-
+    def get_coin_info(self, token: str) -> int:
+        token = config.Tokens_Mapping[token]
         data = self.account_resource(
-            AccountAddress.from_hex(constants.RESOURCES_ACCOUNT),
-            f"{constants.NETWORKS_MODULES['LiquidityPool']}::LiquidityPool<{config.Tokens_Mapping['USDT']}, {config.Tokens_Mapping['APTOS']}, {CURVES}>",
+            AccountAddress.from_hex(token.split("::")[0]),
+            f"{constants.COIN_INFO}<{token}>",
         )["data"]
+        return data["decimals"]
 
-        coin_x_reserve = pretty_amount(int(data["coin_x_reserve"]["value"]), "USDT")
-        coin_y_reserve = pretty_amount(int(data["coin_y_reserve"]["value"]), "APTOS")
+    def convert_to_decimals(self, amount: float, token: str) -> int:
+        d = self.get_coin_info(token)
+        return int(amount * 10**d)
 
-        coinInAfterFees = amount_in * (constants.FEE_SCALE - constants.FEE_PCT)
+    def pretty_amount(self, amount: int, token: str) -> float:
+        d = self.get_coin_info(token)
+        return float(amount / 10**d)
 
-        newReservesInSize = coin_y_reserve * constants.FEE_SCALE + coinInAfterFees
+    def calculate_rates(self, from_token: str, to_token: str, amount: float) -> float:
+        try:
+            token_x = from_token
+            token_y = to_token
+            type = f"{constants.NETWORKS_MODULES['LiquidityPool']}::LiquidityPool<{config.Tokens_Mapping[token_x]}, {config.Tokens_Mapping[token_y]}, {constants.CURVES}>"
+            data = self.account_resource(
+                AccountAddress.from_hex(constants.RESOURCES_ACCOUNT),
+                f"{constants.NETWORKS_MODULES['LiquidityPool']}::LiquidityPool<{config.Tokens_Mapping[token_x]}, {config.Tokens_Mapping[token_y]}, {constants.CURVES}>",
+            )["data"]
+            from_token_reserve = self.pretty_amount(
+                int(data["coin_x_reserve"]["value"]), token_x
+            )
+            to_token_reserve = self.pretty_amount(
+                int(data["coin_y_reserve"]["value"]), token_y
+            )
+        except:
+            token_x = to_token
+            token_y = from_token
+            type = f"{constants.NETWORKS_MODULES['LiquidityPool']}::LiquidityPool<{config.Tokens_Mapping[token_x]}, {config.Tokens_Mapping[token_y]}, {constants.CURVES}>"
+            data = self.account_resource(
+                AccountAddress.from_hex(constants.RESOURCES_ACCOUNT),
+                type,
+            )["data"]
+            to_token_reserve = self.pretty_amount(
+                int(data["coin_x_reserve"]["value"]), token_x
+            )
+            from_token_reserve = self.pretty_amount(
+                int(data["coin_y_reserve"]["value"]), token_y
+            )
 
-        return coinInAfterFees * coin_x_reserve / newReservesInSize
+        coinInAfterFees = amount * (constants.FEE_SCALE - constants.FEE_PCT)
 
-    def get_apt_balance(self) -> Optional[int]:
-        """get APT balance"""
-        return pretty_amount(int(self.account_balance(self.my_account.address())), "APTOS")
+        newReservesInSize = from_token_reserve * constants.FEE_SCALE + coinInAfterFees
 
-    def get_usdt_balance(self) -> Optional[int]:
-        """get USDT balance"""
+        return coinInAfterFees * to_token_reserve / newReservesInSize
+
+    def get_token_balance(self, token: str) -> int:
+        """get balance of `token`"""
+        try:
+            r = self.account_resource(
+                self.my_account.address(),
+                f"0x1::coin::CoinStore<{config.Tokens_Mapping[token]}>",
+            )["data"]["coin"]["value"]
+        except:
+            return 0
+
         return (
-            pretty_amount(
-                int(
-                    self.account_resource(
-                        self.my_account.address(),
-                        f"0x1::coin::CoinStore<{config.Tokens_Mapping['USDT']}>",
-                    )["data"]["coin"]["value"]
-                )
-            ),
-            "USDT",
+            self.pretty_amount(int(r)),
+            token,
         )
 
     def swap(self, from_amount: int, to_amount: int) -> str:
@@ -75,7 +100,7 @@ class LiquidSwapClient(RestClient):
             [
                 TypeTag(StructTag.from_str(config.Tokens_Mapping["APTOS"])),
                 TypeTag(StructTag.from_str(config.Tokens_Mapping["USDT"])),
-                TypeTag(StructTag.from_str(CURVES)),
+                TypeTag(StructTag.from_str(constants.CURVES)),
             ],
             [
                 TransactionArgument(
@@ -92,3 +117,20 @@ class LiquidSwapClient(RestClient):
             self.my_account, TransactionPayload(payload)
         )
         return self.submit_bcs_transaction(signed_transaction)
+
+
+if __name__ == "__main__":
+
+    rest_client = LiquidSwapClient(config.Node_Url)
+
+    r = rest_client.calculate_rates("APTOS", "USDT", 1)
+
+    print(r)
+
+    r = rest_client.calculate_rates("USDT", "APTOS", 1)
+
+    print(r)
+
+    r = rest_client.get_token_balance("APTOS")
+
+    print(r)

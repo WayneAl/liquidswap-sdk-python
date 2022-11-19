@@ -10,7 +10,7 @@ COIN_STORE = "0x1::coin::CoinStore"
 NETWORKS_MODULES = {
     "Scripts": f"{MODULES_ACCOUNT}::scripts_v2",
     "Faucet": f"{COINS_ACCOUNT}::faucet",
-    "LiquidityPool": f"{RESOURCES_ACCOUNT}::liquidity_pool",
+    "LiquidityPool": f"{MODULES_ACCOUNT}::liquidity_pool",
     "CoinInfo": f"{COIN_INFO}",
     "CoinStore": f"{COIN_STORE}",
 }
@@ -18,3 +18,4 @@ NETWORKS_MODULES = {
 
 FEE_PCT = 3
 FEE_SCALE = 1000
+CURVES = f"{MODULES_ACCOUNT}::curves::Uncorrelated"

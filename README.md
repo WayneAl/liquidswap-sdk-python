@@ -3,7 +3,7 @@
 WIP:
 
 - [x] convertToDecimals
-- [ ] calculateRates
+- [x] calculateRates
 - [ ] createSwapTransactionPayload
 - [ ] create pypl package
 

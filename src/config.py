@@ -10,4 +10,6 @@ Tokens_Mapping = {
     "BTC": "0x43417434fd869edee76cca2a4d2301e528a1551b1d719b75c350c3c97d15b8b9::coins::BTC",
 }
 
-Coin_Info = {"APTOS": 6, "USDT": 6, "BTC": 8}
+
+# Your wallet path
+wallet_path = "<YOUR_WALLET_PATH>"
