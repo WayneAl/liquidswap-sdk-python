@@ -12,4 +12,4 @@ Tokens_Mapping = {
 
 
 # Your wallet path
-wallet_path = "<YOUR_WALLET_PATH>"
+wallet_path = "temp_wallet.json"
