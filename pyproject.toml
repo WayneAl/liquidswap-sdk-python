@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "liquidswap_sdk"
-version = "0.0.1"
+version = "0.0.2"
 description = "Liquidswap Python SDK"
 authors = ["Wayne Kuo <wayne01213@gmail.com>"]
 license = "GPLv3"
