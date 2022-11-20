@@ -15,7 +15,7 @@ classifiers= [
 ]
 
 packages = [
-    { include = "src" }
+    { include = "liquidswap_sdk" }
 ]
 
 [tool.poetry.dependencies]

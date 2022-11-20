@@ -1,9 +1,7 @@
-from typing import Optional
-
 from aptos_sdk.account import Account
 from aptos_sdk.account_address import AccountAddress
 from aptos_sdk.bcs import Serializer
-from aptos_sdk.client import RestClient, FaucetClient
+from aptos_sdk.client import RestClient
 from aptos_sdk.transactions import (
     EntryFunction,
     TransactionArgument,
@@ -11,28 +9,29 @@ from aptos_sdk.transactions import (
 )
 from aptos_sdk.type_tag import StructTag, TypeTag
 
-import constants
-import config
-import os
+from .constants import (
+    COIN_INFO,
+    NETWORKS_MODULES,
+    RESOURCES_ACCOUNT,
+    FEE_SCALE,
+    FEE_PCT,
+    CURVES,
+)
 
 
 class LiquidSwapClient(RestClient):
-    def __init__(self, node_url: str, wallet_path: str = None):
+    def __init__(self, node_url: str, tokens_mapping: dict, wallet_path: str):
         super().__init__(node_url)
 
-        if wallet_path:
-            self.my_account = Account.load(wallet_path)
-        elif os.path.exists(config.wallet_path):
-            self.my_account = Account.load(config.wallet_path)
-        else:
-            self.my_account = Account.generate()
-            self.my_account.store(config.wallet_path)
+        self.tokens_mapping = tokens_mapping
+
+        self.my_account = Account.load(wallet_path)
 
     def get_coin_info(self, token: str) -> int:
-        token = config.Tokens_Mapping[token]
+        token = self.tokens_mapping[token]
         data = self.account_resource(
             AccountAddress.from_hex(token.split("::")[0]),
-            f"{constants.COIN_INFO}<{token}>",
+            f"{COIN_INFO}<{token}>",
         )["data"]
         return data["decimals"]
 
@@ -48,10 +47,10 @@ class LiquidSwapClient(RestClient):
         try:
             token_x = from_token
             token_y = to_token
-            type = f"{constants.NETWORKS_MODULES['LiquidityPool']}::LiquidityPool<{config.Tokens_Mapping[token_x]}, {config.Tokens_Mapping[token_y]}, {constants.CURVES}>"
+            type = f"{NETWORKS_MODULES['LiquidityPool']}::LiquidityPool<{self.tokens_mapping[token_x]}, {self.tokens_mapping[token_y]}, {CURVES}>"
             data = self.account_resource(
-                AccountAddress.from_hex(constants.RESOURCES_ACCOUNT),
-                f"{constants.NETWORKS_MODULES['LiquidityPool']}::LiquidityPool<{config.Tokens_Mapping[token_x]}, {config.Tokens_Mapping[token_y]}, {constants.CURVES}>",
+                AccountAddress.from_hex(RESOURCES_ACCOUNT),
+                f"{NETWORKS_MODULES['LiquidityPool']}::LiquidityPool<{self.tokens_mapping[token_x]}, {self.tokens_mapping[token_y]}, {CURVES}>",
             )["data"]
             from_token_reserve = self.pretty_amount(
                 int(data["coin_x_reserve"]["value"]), token_x
@@ -62,9 +61,9 @@ class LiquidSwapClient(RestClient):
         except:
             token_x = to_token
             token_y = from_token
-            type = f"{constants.NETWORKS_MODULES['LiquidityPool']}::LiquidityPool<{config.Tokens_Mapping[token_x]}, {config.Tokens_Mapping[token_y]}, {constants.CURVES}>"
+            type = f"{NETWORKS_MODULES['LiquidityPool']}::LiquidityPool<{self.tokens_mapping[token_x]}, {self.tokens_mapping[token_y]}, {CURVES}>"
             data = self.account_resource(
-                AccountAddress.from_hex(constants.RESOURCES_ACCOUNT),
+                AccountAddress.from_hex(RESOURCES_ACCOUNT),
                 type,
             )["data"]
             to_token_reserve = self.pretty_amount(
@@ -74,9 +73,9 @@ class LiquidSwapClient(RestClient):
                 int(data["coin_y_reserve"]["value"]), token_y
             )
 
-        coinInAfterFees = amount * (constants.FEE_SCALE - constants.FEE_PCT)
+        coinInAfterFees = amount * (FEE_SCALE - FEE_PCT)
 
-        newReservesInSize = from_token_reserve * constants.FEE_SCALE + coinInAfterFees
+        newReservesInSize = from_token_reserve * FEE_SCALE + coinInAfterFees
 
         return coinInAfterFees * to_token_reserve / newReservesInSize
 
@@ -85,7 +84,7 @@ class LiquidSwapClient(RestClient):
         if self.is_coin_registered(token):
             r = self.account_resource(
                 self.my_account.address(),
-                f"0x1::coin::CoinStore<{config.Tokens_Mapping[token]}>",
+                f"0x1::coin::CoinStore<{self.tokens_mapping[token]}>",
             )["data"]["coin"]["value"]
             return self.pretty_amount(int(r), token)
         else:
@@ -95,7 +94,7 @@ class LiquidSwapClient(RestClient):
         try:
             self.account_resource(
                 self.my_account.address(),
-                f"0x1::coin::CoinStore<{config.Tokens_Mapping[token]}>",
+                f"0x1::coin::CoinStore<{self.tokens_mapping[token]}>",
             )["data"]["coin"]["value"]
             return True
         except:
@@ -107,7 +106,7 @@ class LiquidSwapClient(RestClient):
             "0x1::managed_coin",
             "register",
             [
-                TypeTag(StructTag.from_str(config.Tokens_Mapping[token])),
+                TypeTag(StructTag.from_str(self.tokens_mapping[token])),
             ],
             [],
         )
@@ -116,7 +115,7 @@ class LiquidSwapClient(RestClient):
         )
 
         tx = self.submit_bcs_transaction(signed_transaction)
-        rest_client.wait_for_transaction(tx)
+        self.wait_for_transaction(tx)
         print(f"register coin: {token}, tx: {tx}")
         return tx
 
@@ -128,12 +127,12 @@ class LiquidSwapClient(RestClient):
             tx = self.register(to_token)
 
         payload = EntryFunction.natural(
-            constants.NETWORKS_MODULES["Scripts"],
+            NETWORKS_MODULES["Scripts"],
             "swap",
             [
-                TypeTag(StructTag.from_str(config.Tokens_Mapping[from_token])),
-                TypeTag(StructTag.from_str(config.Tokens_Mapping[to_token])),
-                TypeTag(StructTag.from_str(constants.CURVES)),
+                TypeTag(StructTag.from_str(self.tokens_mapping[from_token])),
+                TypeTag(StructTag.from_str(self.tokens_mapping[to_token])),
+                TypeTag(StructTag.from_str(CURVES)),
             ],
             [
                 TransactionArgument(
@@ -150,25 +149,6 @@ class LiquidSwapClient(RestClient):
             self.my_account, TransactionPayload(payload)
         )
         tx = self.submit_bcs_transaction(signed_transaction)
-        rest_client.wait_for_transaction(tx)
+        self.wait_for_transaction(tx)
         print(f"swap coin tx: {tx}")
         return tx
-
-
-if __name__ == "__main__":
-
-    rest_client = LiquidSwapClient(config.Node_Url)
-
-    r = rest_client.calculate_rates("APTOS", "USDT", 1)
-
-    print(r)
-
-    r = rest_client.calculate_rates("USDT", "APTOS", 1)
-
-    print(r)
-
-    r = rest_client.get_token_balance("APTOS")
-
-    print(r)
-
-    rest_client.swap("APTOS", "USDT", 0.01, 0.005)
