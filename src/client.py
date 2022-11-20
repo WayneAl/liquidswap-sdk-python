@@ -82,19 +82,50 @@ class LiquidSwapClient(RestClient):
 
     def get_token_balance(self, token: str) -> float:
         """get balance of `token`"""
-        try:
+        if self.is_coin_registered(token):
             r = self.account_resource(
                 self.my_account.address(),
                 f"0x1::coin::CoinStore<{config.Tokens_Mapping[token]}>",
             )["data"]["coin"]["value"]
-        except:
+            return self.pretty_amount(int(r), token)
+        else:
             return 0
 
-        return self.pretty_amount(int(r), token)
+    def is_coin_registered(self, token: str) -> bool:
+        try:
+            self.account_resource(
+                self.my_account.address(),
+                f"0x1::coin::CoinStore<{config.Tokens_Mapping[token]}>",
+            )["data"]["coin"]["value"]
+            return True
+        except:
+            return False
+
+    def register(self, token: str) -> str:
+
+        payload = EntryFunction.natural(
+            "0x1::managed_coin",
+            "register",
+            [
+                TypeTag(StructTag.from_str(config.Tokens_Mapping[token])),
+            ],
+            [],
+        )
+        signed_transaction = self.create_single_signer_bcs_transaction(
+            self.my_account, TransactionPayload(payload)
+        )
+
+        tx = self.submit_bcs_transaction(signed_transaction)
+        rest_client.wait_for_transaction(tx)
+        print(f"register coin: {token}, tx: {tx}")
+        return tx
 
     def swap(
         self, from_token: str, to_token: str, from_amount: float, to_amount: float
     ) -> str:
+
+        if not self.is_coin_registered(to_token):
+            tx = self.register(to_token)
 
         payload = EntryFunction.natural(
             constants.NETWORKS_MODULES["Scripts"],
@@ -118,7 +149,10 @@ class LiquidSwapClient(RestClient):
         signed_transaction = self.create_single_signer_bcs_transaction(
             self.my_account, TransactionPayload(payload)
         )
-        return self.submit_bcs_transaction(signed_transaction)
+        tx = self.submit_bcs_transaction(signed_transaction)
+        rest_client.wait_for_transaction(tx)
+        print(f"swap coin tx: {tx}")
+        return tx
 
 
 if __name__ == "__main__":
@@ -137,10 +171,4 @@ if __name__ == "__main__":
 
     print(r)
 
-    r = rest_client.swap("APTOS", "USDT", 0.01, 0.005)
-
-    print(r)
-
-    # TODO:
-    # https://explorer.aptoslabs.com/txn/0x0a77c5c98e65442fce728e97c8b8866cdc432b6e06ea9ccad2a79d743f58f46c
-    # ERROR: Account hasn't registered `CoinStore` for `CoinType
+    rest_client.swap("APTOS", "USDT", 0.01, 0.005)
