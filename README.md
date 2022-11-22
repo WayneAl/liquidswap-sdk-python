@@ -1,30 +1,42 @@
 # liquidswap-sdk-python
 
 
-## Install
+## Installation
 https://pypi.org/project/liquidswap-sdk/
+
 `pip install liquidswap-sdk`
 
 ## Functions
 
-import
-`from liquidswap_sdk.client import LiquidSwapClient`
+### import
+```python
+from liquidswap_sdk.client import LiquidSwapClient
+```
 
-new a client
-`liquidswap_client = LiquidSwapClient(node_url, tokens_mapping, wallet_path)`
+### new a client
+```python
+liquidswap_client = LiquidSwapClient(node_url, tokens_mapping, wallet_path)
+```
 
-get the output amount from given input amount
-`liquidswap_client.calculate_rates("APTOS", "USDT", 1)`
+### get the output amount from given input amount
+```python
+liquidswap_client.calculate_rates("APTOS", "USDT", 1)
+```
 
-swap token
-`liquidswap_client.swap("APTOS", "USDT", 1, usdt_out)`
+### swap token
+```python
+liquidswap_client.swap("APTOS", "USDT", 1, usdt_out)
+```
 
-get token balance
-`liquidswap_client.get_token_balance("APTOS")`
+### get token balance
+```python
+liquidswap_client.get_token_balance("APTOS")
+```
 
-register token
-`liquidswap_client.register("USDT")`
-
+### register token
+```python
+liquidswap_client.register("USDT")
+```
 
 ## How to use
 
